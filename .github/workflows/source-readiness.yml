@@ -1,0 +1,48 @@
+name: R3 source readiness (HOLD until complete)
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Test source-readiness gate and previous bootstrap controls
+        run: python3 -m unittest discover -s tests_bootstrap -v
+      - name: Evaluate complete frozen candidate inventory
+        id: gate
+        run: |
+          python3 scripts/source_readiness.py --root . --registry canon/R3_SOURCE_REGISTRY.json --output source-readiness.json --github-output "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          r=json.loads(Path('source-readiness.json').read_text())
+          summary=Path(os.environ['GITHUB_STEP_SUMMARY'])
+          summary.write_text('## CIVITAS R3 source readiness\n\n'
+            + '**'+r['source_readiness']+'** — '+str(r['matched_files'])+'/'+str(r['expected_files'])+' frozen candidate files match.\n\n'
+            + 'The full R3 suite is not run until the complete frozen file inventory matches.\n'
+            + 'This gate does not attest provider rights, live network, science or parent CodexStation status.\n')
+          PY
+      - name: Run full R3 unit suite only if ALL source hashes match
+        if: steps.gate.outputs.source_ready == 'true'
+        run: |
+          python3 - <<'PY'
+          import json
+          import sys
+          import unittest
+          from pathlib import Path
+          registry=json.loads(Path('canon/R3_SOURCE_REGISTRY.json').read_text())
+          expected=registry['expected_tests']
+          suite=unittest.TestLoader().discover('tests')
+          observed=suite.countTestCases()
+          print(f'Frozen full test count: expected={expected}, discovered={observed}',flush=True)
+          if observed!=expected: sys.exit(3)
+          result=unittest.TextTestRunner(verbosity=2).run(suite)
+          sys.exit(0 if result.wasSuccessful() else 4)
+          PY
