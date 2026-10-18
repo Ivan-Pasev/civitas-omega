@@ -1,0 +1,14 @@
+{
+  "schema": "civitas-source-lock/v1",
+  "lineage": "CIVITAS_R3_PUBLIC_CANDIDATE",
+  "date": "2026-10-18",
+  "remote_repository": "Ivan-Pasev/civitas-omega",
+  "candidate_package": "CIVITAS_OMEGA_R3_CANDIDATE.zip",
+  "candidate_sha256": "8c04a4c364faa600aa28f254e89ab7d6186f7e91c7b83af1bc3bfaf1aa12c6dd",
+  "candidate_file_count": 43,
+  "candidate_offline_tests": "77/77 PASS in local runtime",
+  "remote_source_parity": "OPEN",
+  "remote_ci": "OPEN",
+  "authority_delta": "NONE",
+  "source_origin": "local ChatGPT R3 output; package remains separate from remote repository"
+}
