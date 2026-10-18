@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import importlib.util
-spec=importlib.util.spec_from_file_location('source_readiness',Path(__file__).resolve().parents[1]/'source_readiness.py')
+spec=importlib.util.spec_from_file_location('source_readiness',Path(__file__).resolve().parents[1]/'scripts'/'source_readiness.py')
 mod=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 class ReadinessTests(unittest.TestCase):
