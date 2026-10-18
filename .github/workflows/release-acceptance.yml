@@ -1,0 +1,55 @@
+name: R3 release acceptance (strict)
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Verify full frozen source registry
+        id: source
+        run: |
+          python3 scripts/source_readiness.py --root . --registry canon/R3_SOURCE_REGISTRY.json --output source-readiness.json
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          report=json.loads(Path('source-readiness.json').read_text(encoding='utf-8'))
+          summary=Path(os.environ['GITHUB_STEP_SUMMARY'])
+          status=report.get('source_readiness')
+          matched=report.get('matched_files')
+          expected=report.get('expected_files')
+          summary.open('a',encoding='utf-8').write(
+              '## CIVITAS R3 strict release admission\n\n'
+              f'**{status}** · source parity **{matched}/{expected}**\n\n'
+              'This status covers source completeness only. It does not grant provider, scientific, or CodexStation authority.\n')
+          if status != 'READY_FOR_FULL_OFFLINE_SUITE' or matched != expected or not isinstance(expected,int) or expected <= 0:
+              print('::error title=R3 source incomplete::Missing, altered or unverified frozen candidate source; full R3 release denied')
+              sys.exit(3)
+          PY
+      - name: Run exact full R3 unit-test count
+        run: |
+          python3 - <<'PY'
+          import json
+          import sys
+          import unittest
+          from pathlib import Path
+          manifest=json.loads(Path('canon/R3_SOURCE_REGISTRY.json').read_text(encoding='utf-8'))
+          expected=manifest['expected_tests']
+          suite=unittest.TestLoader().discover('tests')
+          observed=suite.countTestCases()
+          print(f'Expected full R3 tests: {expected}; discovered: {observed}',flush=True)
+          if observed != expected or expected not in (77,91):
+              print('::error title=R3 test-count mismatch::Frozen test count not met')
+              sys.exit(4)
+          result=unittest.TextTestRunner(verbosity=2).run(suite)
+          if not result.wasSuccessful():
+              sys.exit(5)
+          PY
