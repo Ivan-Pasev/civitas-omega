@@ -1,0 +1,19 @@
+name: Bootstrap import safety checks
+on:
+  push:
+    paths:
+      - 'scripts/stage_verified_zip.py'
+      - 'tests_bootstrap/**'
+      - '.github/workflows/bootstrap-validator.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  import-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Check import boundary only
+        run: python3 -m unittest discover -s tests_bootstrap -v
